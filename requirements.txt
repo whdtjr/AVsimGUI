@@ -1,5 +1,0 @@
-PyQt6
-opencv-python
-paho-mqtt
-pupil-labs-realtime-api
-nest-asyncio
