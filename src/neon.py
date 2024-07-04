@@ -1,6 +1,5 @@
 from pupil_labs.realtime_api.simple import discover_one_device
-from pupil_labs.realtime_api.simple import Device
-from pupil_labs.realtime_api import device, StatusUpdateNotifier
+from pupil_labs.realtime_api import device
 import asyncio
 
 class neon_device():
@@ -51,27 +50,15 @@ Flame AVSim Pupil-Labs Neon Control S/W
 @author Byunghun Hwang<bh.hwang@iae.re.kr>
 '''
 
-import sys, os
-import typing
-from PyQt6 import QtGui
+
 import pathlib
 import json
-from PyQt6.QtGui import QImage, QPixmap, QCloseEvent, QStandardItem, QStandardItemModel, QIcon, QColor
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTableView, QLabel, QPushButton, QMessageBox
-from PyQt6.QtWidgets import QFileDialog
-from PyQt6.uic import loadUi
-from PyQt6.QtCore import QModelIndex, QObject, Qt, QTimer, QThread, pyqtSignal, QAbstractTableModel
-import timeit
+
+
 import paho.mqtt.client as mqtt
-from datetime import datetime
-import csv
-import math
-import argparse
+
 from pupil_labs.realtime_api.simple import discover_one_device
-from pupil_labs.realtime_api.simple import Device
-from pupil_labs.realtime_api import device, StatusUpdateNotifier
-import nest_asyncio
-import asyncio
+from pupil_labs.realtime_api import device
 
 
 
@@ -129,11 +116,10 @@ class neon_device():
 class neonController():
     def __init__(self, broker_ip:str):
         super().__init__()
-        loadUi(APP_UI, self)
 
         self.eyetracker = neon_device() # eyetracker device instance
-        self.status_update()
         
+        self.status_callback = None
 
         self.message_api_internal = {
             "flame/avsim/mapi_request_active" : self._mapi_request_active
@@ -146,11 +132,6 @@ class neonController():
             "flame/avsim/neon/mapi_record_stop" : self.mapi_record_stop
         }
         
-        # callback function connection for menu
-        self.btn_record_start.clicked.connect(self.on_click_record_start)  # scenario stop click event function
-        self.btn_record_stop.clicked.connect(self.on_click_record_stop)# scenario pause click event function
-        
-        
         # for mqtt connection
         self.mq_client = mqtt.Client(client_id=APP_NAME, transport='tcp', protocol=mqtt.MQTTv311, clean_session=True)
         self.mq_client.on_connect = self.on_mqtt_connect
@@ -159,15 +140,15 @@ class neonController():
         self.mq_client.connect_async(broker_ip, port=1883, keepalive=60)
         self.mq_client.loop_start()
 
-    # Device status update
-    def status_update(self):
-        if self.eyetracker.device:
-            self.label_ip_text.setText(self.eyetracker.device.address)
-            self.label_name_text.setText(self.eyetracker.device.phone_name)
-            self.label_battery_level_text.setText(str(self.eyetracker.device.battery_level_percent))
-            self.label_battery_state_text.setText(str(self.eyetracker.device.battery_state))
-            self.label_free_storage_text.setText(f"{int(self.eyetracker.device.memory_num_free_bytes/1024**3)}GB")
-            self.label_storage_level_text.setText(str(self.eyetracker.device.memory_state))
+    def set_status_callback(self, callback):
+        self.status_callback = callback
+
+    def show_on_statusbar(self, text):
+        if self.status_callback:
+            self.status_callback(text)
+        else:
+            print(text)
+
 
     # record start event callback
     def on_click_record_start(self):
@@ -208,15 +189,14 @@ class neonController():
                         self._mark_inactive(row)
                     break
         
-     
-    # show message on status bar
-    def show_on_statusbar(self, text):
-        self.statusBar().showMessage(text)
 
-    # close event callback function by user
-    def closeEvent(self, a0: QCloseEvent) -> None:
-        self.eyetracker.close()
-        return super().closeEvent(a0)
+    def close(self):
+        if self.eyetracker:
+            self.eyetracker.close()
+        if self.mq_client:
+            self.mq_client.loop_stop()
+            self.mq_client.disconnect()
+        print("neon controller resources released")
     
     # mqtt connection callback
     def on_mqtt_connect(self, mqttc, obj, flags, rc):
@@ -225,11 +205,13 @@ class neonController():
             self.mq_client.subscribe(topic, 0)
         
         self.show_on_statusbar("Connected to Broker({})".format(str(rc)))
-    
+
     # mqtt disconnection callback
     def on_mqtt_disconnect(self, mqttc, userdata, rc):
         self.show_on_statusbar("Disconnected to Broker({})".format(str(rc)))
-        
+    
+
+
     # mqtt message receive callback
     def on_mqtt_message(self, mqttc, userdata, msg):
         mapi = str(msg.topic)
