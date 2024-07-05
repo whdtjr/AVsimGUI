@@ -54,19 +54,21 @@ class MainGUI(QMainWindow, mainGUI):
             'show_on_statusbar': self.show_on_statusbar,
             'update_frame': self.update_camera_frame,
             'show_error_message': self.show_error_message,
-            'mark_row_color' : self._mark_row_color,
-            'mark_row_reset' : self._mark_row_reset,
-            'mark_inactive' : self._mark_inactive,
-            'mark_active': self._mark_active,
-            'open_scenario_file' : self.
+            'show_information' : self.show_information,
+            'update_scenario_view': self.update_scenario_view,
+            'update_coapp_view': self.update_coapp_view,
+            'open_scenario_file' : self.open_scenario_file,
+            'clear_scenario_model': self.clear_scenario_model,
+            'append_scenario_row': self.append_scenario_row
         }
         #neon도 callback을 매개변수로 넣어줘서 전달할 수 있음
         self.neonController = neon.neonController(broker_ip=broker_ip_address)
         self.neonController.set_status_callback(self.show_on_statusbar)
 
-        self.cameraWindow = camWindow.CameraWindow(broker_ip_address=broker_ip_address, config=configure, callbacks=callbacks)
-        self.manageWindow = manager.AVSimManager(broker_ip=broker_ip_address, callbacks=callbacks)
-
+        #camera
+        self.cameraWindow = camWindow.CameraWindow(broker_ip_address=broker_ip_address, config=configure, 
+                                                   callbacks=callbacks)
+    
         #manager settings
         # scenario model for scenario table
         self.scenario_model = QStandardItemModel()
@@ -82,10 +84,9 @@ class MainGUI(QMainWindow, mainGUI):
         for row, app in enumerate(coapps):
             self.coapp_model.appendRow([QStandardItem(app), QStandardItem("-"), QStandardItem("-")])
             self.coapp_model.item(row, 0).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        # initialize for default
-        for app_row in range(self.coapp_model.rowCount()):
-            self._mark_inactive(app_row)
         
+        self.manageWindow = manager.AVSimManager(broker_ip=broker_ip_address, callbacks=callbacks, 
+                                                 scenario_model=self.scenario_model, coapp_model=self.coapp_model)
 
         # main gui functions
         self.btn_scenario_run.clicked.connect(self.record_start)
@@ -149,36 +150,32 @@ class MainGUI(QMainWindow, mainGUI):
     def show_on_statusbar(self, text):
         self.statusBar().showMessage(text)
 
-    # manager callback
-    
+    def show_information(self, text):
+        QMessageBox.information(text)
 
+    # manager callback
+    def open_scenario_file(self):
+        selected_file = QFileDialog.getOpenFileName(self, 'Open scenario file', './')
+
+        pass
     
+    def clear_scenario_model(self):
+        pass
+
+    def append_scenario_row(self):
+        pass
     # manager draw functions
     # mark inactive
-    def _mark_inactive(self, row):
-        self.coapp_model.item(row, 1).setBackground(QColor(255,0,0,100))
-        self.coapp_model.item(row, 1).setText("INACTIVE")
-        self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+    def update_scenario_view(self, scenario_model):
+        self.scenario_model = scenario_model
+        self.table
+        self.table_scenario_contents.viewport().update()
 
-    # mark active
-    def _mark_active(self, row):
-        self.coapp_model.item(row, 1).setBackground(QColor(0,255,0,100))
-        self.coapp_model.item(row, 1).setText("ACTIVE")
-        self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-    
-     # change row background color
-    def _mark_row_color(self, row):
-        for col in range(self.scenario_model.columnCount()):
-            self.scenario_model.item(row,col).setBackground(QColor(255,0,0,100))
-    
-    # reset all rows background color
-    def _mark_row_reset(self):
-        for col in range(self.scenario_model.columnCount()):
-            for row in range(self.scenario_model.rowCount()):
-                self.scenario_model.item(row,col).setBackground(QColor(0,0,0,0))
+    def update_coapp_view(self):
+        self.table_coapp_status.viewport().update()
 
 
-    # 캠 키고 끄려고 하면 제대로 꺼지지 않음,, 
+    # 캠 키고 toolbar의 exit으로 끄려고 하면 제대로 꺼지지 않음,, 
     def closeEvent(self, event:QCloseEvent) -> None: 
         self.neonController.close()
         self.cameraWindow.close()

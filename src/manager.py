@@ -21,7 +21,6 @@ import math
 import argparse
 
 WORKING_PATH = pathlib.Path(__file__).parent # working path
-APP_UI = WORKING_PATH / "MainWindow.ui" # Qt-based UI file
 APP_NAME = "avsim-manager" # application name
 
 '''
@@ -100,9 +99,12 @@ class ScenarioRunner(QTimer):
 Main window
 '''
 class AVSimManager():
-    def __init__(self, broker_ip:str, callbacks):
+    def __init__(self, broker_ip:str, callbacks, scenario_model:QStandardItemModel, coapp_model:QStandardItemModel):
         super().__init__()
+        self.scenario_model = scenario_model
+        self.coapp_model = coapp_model
         self.callbacks = callbacks
+
         self.message_api_internal = {
             "flame/avsim/mapi_request_active" : self._mapi_request_active
         }
@@ -112,8 +114,8 @@ class AVSimManager():
             "flame/avsim/mapi_notify_active" : self.mapi_notify_active,
             "flame/avsim/mapi_nofity_status" : self.mapi_notify_status
         }
-
-         
+        
+        
         # for mqtt connection
         self.mq_client = mqtt.Client(client_id=APP_NAME, transport='tcp', protocol=mqtt.MQTTv311, clean_session=True)
         self.mq_client.on_connect = self.on_mqtt_connect
@@ -129,41 +131,11 @@ class AVSimManager():
         
         self.scenario_filepath = ""
         
+        # initialize for default
+        for app_row in range(self.coapp_model.rowCount()):
+            self._mark_inactive(app_row)
         
-    def _mark_row_color(self, row):
-        if self.callbacks.get('mark_row_color'):
-            self.callbacks['mark_row_color'](row)
-
-    def _mark_row_reset(self):
-        if self.callbacks.get('mark_row_reset'):
-            self.callbacks['mark_row_reset']()
-
-    def _mark_inactive(self, row):
-        if self.callbacks.get('mark_inactive'):
-            self.callbacks['mark_inactive'](row)
-
-    def _mark_active(self, row):
-        if self.callbacks.get('mark_active'):
-            self.callbacks['mark_active'](row)
-
-    def show_on_statusbar(self, text):
-        if self.callbacks.get('show_on_statusbar'):
-            self.callbacks['show_on_statusbar'](text)
-
-    def open_scenario_file(self):
-        if self.callbacks.get('open_scenario_file'):
-            return self.callbacks['open_scenario_file']()
-
-    def load_scenario(self, scenario_data):
-        if self.callbacks.get('clear_scenario_model'):
-            self.callbacks['clear_scenario_model']()
-        if "scenario" in scenario_data:
-            for data in scenario_data["scenario"]:
-                for event in data["event"]:
-                    if self.callbacks.get('append_scenario_row'):
-                        self.callbacks['append_scenario_row'](str(data["time"]), event["mapi"], event["message"])
-
-
+    
     # open & load scenario file    
     def open_scenario_file(self):
         selected_file = QFileDialog.getOpenFileName(self, 'Open scenario file', './')
@@ -175,7 +147,8 @@ class AVSimManager():
                 try:
                     scenario_data = json.load(sfile)
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", "Scenario file read error {}".format(str(e)))
+                    if self.callbacks.get('show_error_message'):
+                        self.callbacks['show_error_message']("Error", "Scenario file read error {}".format(str(e)))
                     
                 # parse scenario file
                 self.runner.load_scenario(scenario_data)
@@ -188,8 +161,36 @@ class AVSimManager():
                 # table view column width resizing
                 self.table_scenario_contents.resizeColumnsToContents()
             
-
+    # change row background color
+    def _mark_row_color(self, row):
+        for col in range(self.scenario_model.columnCount()):
+            self.scenario_model.item(row,col).setBackground(QColor(255,0,0,100))
+        if self.callbacks.get('update_scenario_model'):
+            self.callbacks['update_scenario_model'](self.scenario_model)
+    
+    # reset all rows background color
+    def _mark_row_reset(self):
+        for col in range(self.scenario_model.columnCount()):
+            for row in range(self.scenario_model.rowCount()):
+                self.scenario_model.item(row,col).setBackground(QColor(0,0,0,0))
+        if self.callbacks.get('update_scenario_model'):
+            self.callbacks['update_scenario_model'](self.scenario_model)
                 
+    # mark inactive
+    def _mark_inactive(self, row):
+        self.coapp_model.item(row, 1).setBackground(QColor(255,0,0,100))
+        self.coapp_model.item(row, 1).setText("INACTIVE")
+        self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        if self.callbacks.get('update_coapp_view'):
+            self.callbacks['update_coapp_view'](self.coapp_model)
+    
+    # mark active
+    def _mark_active(self, row):
+        self.coapp_model.item(row, 1).setBackground(QColor(0,255,0,100))
+        self.coapp_model.item(row, 1).setText("ACTIVE")
+        self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        if self.callbacks.get('update_coapp_view'):
+            self.callbacks['update_coapp_view'](self.coapp_model)
     
     
     # scenario reload
@@ -205,7 +206,8 @@ class AVSimManager():
                     # reload
                     scenario_data = json.load(sfile)
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", "Scenario file read error {}".format(str(e)))
+                    if self.callbacks.get('show_error_message'):
+                        self.callbacks['show_error_message']("Error", "Scenario file read error {}".format(str(e)))
                     
                 # parse scenario file
                 self.runner.load_scenario(scenario_data)
@@ -234,7 +236,8 @@ class AVSimManager():
     def api_end_scenario(self):
         self.runner.stop_scenario()
         self.show_on_statusbar("Scenario runner works done")
-        QMessageBox.information(self, "Info", "Scenario runner works done")
+        if self.callbacks.get('show_information'):
+            self.callbacks['show_information']("Info", "Scenario runner works done")
     
     # stop scenario with timer
     def api_stop_scenario(self):
@@ -292,7 +295,10 @@ class AVSimManager():
                 
     # show message on status bar
     def show_on_statusbar(self, text):
-        self.statusBar().showMessage(text)
+        if self.callbacks.get('show_on_statusbar'):
+            self.callbacks['show_on_statusbar'](text)
+        else:
+            print(text)
     
 
     # close event callback function by user
