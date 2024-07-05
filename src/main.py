@@ -55,11 +55,10 @@ class MainGUI(QMainWindow, mainGUI):
             'update_frame': self.update_camera_frame,
             'show_error_message': self.show_error_message,
             'show_information' : self.show_information,
+            'update_scenario_model':self.update_scenario_model,
+            'update_coapp_model':self.update_coapp_model,
             'update_scenario_view': self.update_scenario_view,
             'update_coapp_view': self.update_coapp_view,
-            'open_scenario_file' : self.open_scenario_file,
-            'clear_scenario_model': self.clear_scenario_model,
-            'append_scenario_row': self.append_scenario_row
         }
         #neon도 callback을 매개변수로 넣어줘서 전달할 수 있음
         self.neonController = neon.neonController(broker_ip=broker_ip_address)
@@ -154,25 +153,26 @@ class MainGUI(QMainWindow, mainGUI):
         QMessageBox.information(text)
 
     # manager callback
-    def open_scenario_file(self):
-        selected_file = QFileDialog.getOpenFileName(self, 'Open scenario file', './')
-
-        pass
     
-    def clear_scenario_model(self):
-        pass
+    def update_scenario_model(self, scenario_model):
+        self.scenario_model = scenario_model
+        self.table_scenario_contents.setModel(self.scenario_model)
+        self.table_scenario_contents.resizeColumnsToContents()
+        
+    
+    def update_coapp_model(self, coapp_model):
+        self.coapp_model = coapp_model
+        self.table_coapp_status.setModel(self.coapp_model)
 
-    def append_scenario_row(self):
-        pass
     # manager draw functions
-    # mark inactive
     def update_scenario_view(self, scenario_model):
         self.scenario_model = scenario_model
-        self.table
-        self.table_scenario_contents.viewport().update()
+        self.table_scenario_contents.setModel(self.scenario_model)
 
-    def update_coapp_view(self):
-        self.table_coapp_status.viewport().update()
+    def update_coapp_view(self, coapp_model):
+        self.coapp_model = coapp_model
+        self.table_coapp_status.setModel(self.coapp_model)
+
 
 
     # 캠 키고 toolbar의 exit으로 끄려고 하면 제대로 꺼지지 않음,, 

@@ -8,7 +8,7 @@ import typing
 from PyQt6 import QtGui
 import pathlib
 import json
-from PyQt6.QtGui import QImage, QPixmap, QCloseEvent, QStandardItem, QStandardItemModel, QIcon, QColor
+from PyQt6.QtGui import QImage, QPixmap, QCloseEvent, QStandardItem, QStandardItemModel, QIcon, QColor, QBrush
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTableView, QLabel, QPushButton, QMessageBox
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.uic import loadUi
@@ -138,10 +138,11 @@ class AVSimManager():
     
     # open & load scenario file    
     def open_scenario_file(self):
-        selected_file = QFileDialog.getOpenFileName(self, 'Open scenario file', './')
-        if selected_file[0]:
-            sfile = open(selected_file[0], "r")
-            self.scenario_filepath = selected_file[0]
+        if self.callbacks.get('open_scenario_file'):
+            selected_file = self.callbacks['open_scenario_file']()
+        if selected_file:
+            sfile = open(selected_file, "r")
+            self.scenario_filepath = selected_file
             
             with sfile:
                 try:
@@ -149,36 +150,42 @@ class AVSimManager():
                 except Exception as e:
                     if self.callbacks.get('show_error_message'):
                         self.callbacks['show_error_message']("Error", "Scenario file read error {}".format(str(e)))
-                    
+                    return
+                
                 # parse scenario file
                 self.runner.load_scenario(scenario_data)
                 self.scenario_model.setRowCount(0)
+
                 if "scenario" in scenario_data:
                     for data in scenario_data["scenario"]:
                         for event in data["event"]:
-                            self.scenario_model.appendRow([QStandardItem(str(data["time"])), QStandardItem(event["mapi"]), QStandardItem(event["message"])])
+                            if self.callbacks.get('append_scenario_row'):
+                                self.scenario_model.appendRow([QStandardItem(str(data["time"])), QStandardItem(event["mapi"]), QStandardItem(event["message"])])
+
 
                 # table view column width resizing
-                self.table_scenario_contents.resizeColumnsToContents()
+                if self.callbacks.get('update_scenario_model'):
+                    self.callbacks['update_scenario_model'](self.scenario_model)
+                
             
     # change row background color
     def _mark_row_color(self, row):
         for col in range(self.scenario_model.columnCount()):
-            self.scenario_model.item(row,col).setBackground(QColor(255,0,0,100))
-        if self.callbacks.get('update_scenario_model'):
-            self.callbacks['update_scenario_model'](self.scenario_model)
+            self.scenario_model.item(row,col).setBackground((QColor('red')))
+        if self.callbacks.get('update_scenario_view'):
+            self.callbacks['update_scenario_view'](self.scenario_model)
     
     # reset all rows background color
     def _mark_row_reset(self):
         for col in range(self.scenario_model.columnCount()):
             for row in range(self.scenario_model.rowCount()):
-                self.scenario_model.item(row,col).setBackground(QColor(0,0,0,0))
-        if self.callbacks.get('update_scenario_model'):
-            self.callbacks['update_scenario_model'](self.scenario_model)
+                self.scenario_model.item(row,col).setBackground((QColor(0,0,0,0)))
+        if self.callbacks.get('update_scenario_view'):
+            self.callbacks['update_scenario_view'](self.scenario_model)
                 
     # mark inactive
     def _mark_inactive(self, row):
-        self.coapp_model.item(row, 1).setBackground(QColor(255,0,0,100))
+        self.coapp_model.item(row, 1).setBackground((QColor('red')))
         self.coapp_model.item(row, 1).setText("INACTIVE")
         self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         if self.callbacks.get('update_coapp_view'):
@@ -186,7 +193,7 @@ class AVSimManager():
     
     # mark active
     def _mark_active(self, row):
-        self.coapp_model.item(row, 1).setBackground(QColor(0,255,0,100))
+        self.coapp_model.item(row, 1).setBackground((QColor(0,255,0,100)))
         self.coapp_model.item(row, 1).setText("ACTIVE")
         self.coapp_model.item(row, 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         if self.callbacks.get('update_coapp_view'):
@@ -218,8 +225,8 @@ class AVSimManager():
                             self.scenario_model.appendRow([QStandardItem(str(data["time"])), QStandardItem(event["mapi"]), QStandardItem(event["message"])])
 
                 # table view column width resizing
-                self.table_scenario_contents.resizeColumnsToContents()
-                
+                if self.callbacks.get('update_scenario_model'):
+                    self.callbacks['update_scenario_model'](self.scenario_model)
                 self.show_on_statusbar("Scenario is reloaded")
         
     def scenario_save(self):
@@ -301,6 +308,7 @@ class AVSimManager():
             print(text)
     
 
+    # exit 구현해야함
     # close event callback function by user
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.api_stop_scenario()
@@ -336,17 +344,3 @@ class AVSimManager():
         except json.JSONDecodeError as e:
             print("MAPI Message payload cannot be converted")
             
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--broker', nargs='?', required=False, help="Broker Address")
-    args = parser.parse_args()
-
-    broker_address = "127.0.0.1"
-    if args.broker is not None:
-        broker_address = args.broker
-    
-    app = QApplication(sys.argv)
-    window = AVSimManager(broker_ip=broker_address)
-    window.show()
-    sys.exit(app.exec())
