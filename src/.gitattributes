@@ -1,0 +1,9 @@
+MainWindow.py filter=lfs diff=lfs merge=lfs -text
+camWindow.py filter=lfs diff=lfs merge=lfs -text
+main.py filter=lfs diff=lfs merge=lfs -text
+mapi.py filter=lfs diff=lfs merge=lfs -text
+mixerWindow.py filter=lfs diff=lfs merge=lfs -text
+neon.py filter=lfs diff=lfs merge=lfs -text
+UserId.py filter=lfs diff=lfs merge=lfs -text
+camera.py filter=lfs diff=lfs merge=lfs -text
+manager.py filter=lfs diff=lfs merge=lfs -text
