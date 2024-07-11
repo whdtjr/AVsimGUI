@@ -35,3 +35,6 @@ mixer의 fade in, fade out 기능
 
 
 status 상태 실시간 기록 기능
+
+
+carla 통신 기능
