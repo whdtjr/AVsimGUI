@@ -14,7 +14,7 @@ make run
 ## GUI 사용법
 
 처음 페이지에서 id를 enroll하면 자신의 폴더가 만들어진다.
-
+자신의 폴더를 더블클릭 한다.
 
 ![login](img/login.png)
 
