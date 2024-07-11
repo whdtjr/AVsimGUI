@@ -25,3 +25,9 @@ make run
 ![full_gui](img/full_gui.png)
 
 run을 누르면 시나리오가 시작되고 만들어진 scenario 대로 움직인다. 여기서 저장되는 위치는 코드가 저장된 위치에서 names 파일 안에 자신의 id 파일들이 있고 거기에서 camera data와 cdlink의 버튼 클릭 시간을 기록하는 csv파일이 저장된다.
+
+
+## 구현되지 않은 기능
+HPE model 선택 기능 : YOLO 모델 선택하여 적용
+mixer의 fade in, fade out 기능
+status 상태 실시간 기록 기능
