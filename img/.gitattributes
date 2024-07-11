@@ -1,0 +1,2 @@
+full_gui.png filter=lfs diff=lfs merge=lfs -text
+login.png filter=lfs diff=lfs merge=lfs -text
