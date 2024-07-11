@@ -29,5 +29,9 @@ run을 누르면 시나리오가 시작되고 만들어진 scenario 대로 움�
 
 ## 구현되지 않은 기능
 HPE model 선택 기능 : YOLO 모델 선택하여 적용
+
+
 mixer의 fade in, fade out 기능
+
+
 status 상태 실시간 기록 기능
