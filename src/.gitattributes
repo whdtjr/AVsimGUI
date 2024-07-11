@@ -7,3 +7,7 @@ neon.py filter=lfs diff=lfs merge=lfs -text
 UserId.py filter=lfs diff=lfs merge=lfs -text
 camera.py filter=lfs diff=lfs merge=lfs -text
 manager.py filter=lfs diff=lfs merge=lfs -text
+cdlink.py filter=lfs diff=lfs merge=lfs -text
+modle filter=lfs diff=lfs merge=lfs -text
+model filter=lfs diff=lfs merge=lfs -text
+resource filter=lfs diff=lfs merge=lfs -text

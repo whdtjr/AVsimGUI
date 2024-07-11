@@ -1,0 +1,2 @@
+UserId.ui filter=lfs diff=lfs merge=lfs -text
+MainWindow.ui filter=lfs diff=lfs merge=lfs -text
